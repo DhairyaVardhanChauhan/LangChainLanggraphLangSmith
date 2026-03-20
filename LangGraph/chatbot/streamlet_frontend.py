@@ -94,11 +94,12 @@ if st.sidebar.button("New Chat"):
 # ******************************************************
 
 config = {
-    "configurable": {
+    "configurable": {"thread_id": st.session_state["thread_id"]},
+    "metadata": {
         "thread_id": st.session_state["thread_id"]
-    }
+    },
+    "run_name": "chat_turn",
 }
-
 
 # ******************************************************
 # **************** Chat History Render *****************
@@ -129,15 +130,18 @@ if user_input:
     # ************** AI RESPONSE *****************
     with st.chat_message("assistant"):
 
-        ai_message = st.write_stream(
-            message_chunk.content
+        def stream_ai_only():
             for message_chunk, metadata in chatbot.stream(
-                {"messages": [HumanMessage(content=user_input)]},
-                config=config,
-                stream_mode="messages"
-            )
-        )
+                    {"messages": [HumanMessage(content=user_input)]},
+                    config=config,
+                    stream_mode="messages"
+            ):
+                if isinstance(message_chunk, AIMessage):
+                    if message_chunk.content:
+                        yield message_chunk.content
 
+
+        ai_message = st.write_stream(stream_ai_only())
         st.session_state["message_history"].append({
             "role": "assistant",
             "content": ai_message
